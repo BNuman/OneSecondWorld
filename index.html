@@ -1,383 +1,125 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"; import { motion, AnimatePresence } from "framer-motion"; import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input"; import { Badge } from "@/components/ui/badge"; import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; import { Calendar, Upload, Play, Globe, Sparkles, Trash2, Film, Camera, CheckCircle2 } from "lucide-react";
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OneSecond World</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 5px;
+    }
+    button {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: black;
+      color: white;
+      font-size: 16px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      margin-top: 15px;
+    }
+    video, img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
 
-const STORAGE_KEY = "one-second-world.entries.v1"; const USERNAME_KEY = "one-second-world.username.v1";
+<h1>OneSecond World</h1>
+<p>1 sekund per dag</p>
 
-const communityMoments = [ { date: "2026-04-05", country: "Japan", caption: "Morning train into Tokyo", emoji: "🚆", }, { date: "2026-04-05", country: "Brazil", caption: "Family lunch on a sunny Sunday", emoji: "☀️", }, { date: "2026-04-04", country: "Sweden", caption: "A quiet forest walk", emoji: "🌲", }, { date: "2026-04-03", country: "Kenya", caption: "Football after school", emoji: "⚽", }, { date: "2026-04-02", country: "Italy", caption: "Coffee and city streets", emoji: "☕", }, { date: "2026-04-01", country: "Canada", caption: "Late snow, early spring", emoji: "❄️", }, ];
-
-function formatDate(dateStr) { const d = new Date(dateStr + "T12:00:00"); return d.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric", }); }
-
-function getToday() { const d = new Date(); const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, "0"); const day = String(d.getDate()).padStart(2, "0"); return ${year}-${month}-${day}; }
-
-function getMonthDays(baseDate = new Date()) { const year = baseDate.getFullYear(); const month = baseDate.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate(); return Array.from({ length: daysInMonth }, (_, i) => { const d = new Date(year, month, i + 1); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, "0"); const day = String(d.getDate()).padStart(2, "0"); return ${y}-${m}-${day}; }); }
-
-function readFileAsDataURL(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }); }
-
-function buildMonthlyStory(entries) { const ordered = [...entries].sort((a, b) => a.date.localeCompare(b.date)); if (!ordered.length) return []; return ordered.map((entry, index) => ({ ...entry, slideTitle: Moment ${index + 1}, })); }
-
-function EmptyState({ title, text, icon: Icon }) { return ( <Card className="rounded-3xl shadow-sm border-dashed"> <CardContent className="p-8 text-center"> <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted"> <Icon className="h-7 w-7" /> </div> <h3 className="text-lg font-semibold">{title}</h3> <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">{text}</p> </CardContent> </Card> ); }
-
-export default function OneSecondWorldMVP() { const [entries, setEntries] = useState([]); const [selectedDate, setSelectedDate] = useState(getToday()); const [name, setName] = useState(""); const [caption, setCaption] = useState(""); const [activeTab, setActiveTab] = useState("home"); const [storyOpen, setStoryOpen] = useState(false); const [storyIndex, setStoryIndex] = useState(0); const [communityIndex, setCommunityIndex] = useState(0); const [uploading, setUploading] = useState(false); const inputRef = useRef(null);
-
-useEffect(() => { const saved = localStorage.getItem(STORAGE_KEY); const savedName = localStorage.getItem(USERNAME_KEY); if (saved) { try { setEntries(JSON.parse(saved)); } catch {} } if (savedName) setName(savedName); }, []);
-
-useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }, [entries]);
-
-useEffect(() => { localStorage.setItem(USERNAME_KEY, name); }, [name]);
-
-const today = getToday(); const todayEntry = entries.find((e) => e.date === today); const currentEntry = entries.find((e) => e.date === selectedDate); const days = getMonthDays(new Date()); const monthlyStory = useMemo(() => buildMonthlyStory(entries), [entries]); const streak = useMemo(() => { const dates = new Set(entries.map((e) => e.date)); let count = 0; const cursor = new Date(); while (true) { const y = cursor.getFullYear(); const m = String(cursor.getMonth() + 1).padStart(2, "0"); const d = String(cursor.getDate()).padStart(2, "0"); const key = ${y}-${m}-${d}; if (dates.has(key)) { count++; cursor.setDate(cursor.getDate() - 1); } else { break; } } return count; }, [entries]);
-
-async function handleFileChange(event) { const file = event.target.files?.[0]; if (!file) return; setUploading(true); try { const dataUrl = await readFileAsDataURL(file); const type = file.type.startsWith("video") ? "video" : "image"; const newEntry = { id: crypto.randomUUID(), date: today, caption: caption || A moment from ${formatDate(today)}, type, src: dataUrl, createdAt: new Date().toISOString(), }; setEntries((prev) => { const withoutToday = prev.filter((item) => item.date !== today); return [...withoutToday, newEntry].sort((a, b) => a.date.localeCompare(b.date)); }); setCaption(""); setActiveTab("timeline"); setSelectedDate(today); } finally { setUploading(false); if (event.target) event.target.value = ""; } }
-
-function deleteEntry(id) { setEntries((prev) => prev.filter((entry) => entry.id !== id)); }
-
-function nextCommunity() { setCommunityIndex((prev) => (prev + 1) % communityMoments.length); }
-
-return ( <div className="min-h-screen bg-gradient-to-b from-background to-muted/40 p-4 md:p-8"> <div className="mx-auto max-w-6xl"> <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6 grid gap-4 md:grid-cols-[1.4fr_0.9fr]" > <Card className="rounded-3xl shadow-sm overflow-hidden"> <CardContent className="p-6 md:p-8"> <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"> <div> <div className="flex items-center gap-2 text-sm text-muted-foreground"> <Sparkles className="h-4 w-4" /> OneSecond World </div> <h1 className="mt-2 text-3xl md:text-4xl font-bold tracking-tight"> Capture one second. Remember a whole life. </h1> <p className="mt-3 max-w-2xl text-sm md:text-base text-muted-foreground"> A working MVP for your idea: save one moment each day, build a living timeline, and explore how other people spent that same day around the world. </p> </div> <div className="grid grid-cols-2 gap-3 md:w-72"> <Card className="rounded-2xl"> <CardContent className="p-4"> <div className="text-xs text-muted-foreground">Entries</div> <div className="mt-1 text-2xl font-bold">{entries.length}</div> </CardContent> </Card> <Card className="rounded-2xl"> <CardContent className="p-4"> <div className="text-xs text-muted-foreground">Streak</div> <div className="mt-1 text-2xl font-bold">{streak}d</div> </CardContent> </Card> </div> </div> </CardContent> </Card>
-
-<Card className="rounded-3xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="text-sm text-muted-foreground">Profile</div>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            className="mt-3 rounded-2xl"
-          />
-          <div className="mt-4 flex items-center justify-between rounded-2xl bg-muted p-4">
-            <div>
-              <div className="text-sm font-medium">Today</div>
-              <div className="text-xs text-muted-foreground">{formatDate(today)}</div>
-            </div>
-            {todayEntry ? (
-              <Badge className="rounded-xl gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Done</Badge>
-            ) : (
-              <Badge variant="secondary" className="rounded-xl">Missing</Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid grid-cols-4 rounded-2xl h-auto p-1">
-        <TabsTrigger value="home" className="rounded-xl py-3 gap-2"><Camera className="h-4 w-4" /> Home</TabsTrigger>
-        <TabsTrigger value="timeline" className="rounded-xl py-3 gap-2"><Calendar className="h-4 w-4" /> Timeline</TabsTrigger>
-        <TabsTrigger value="story" className="rounded-xl py-3 gap-2"><Film className="h-4 w-4" /> Story</TabsTrigger>
-        <TabsTrigger value="world" className="rounded-xl py-3 gap-2"><Globe className="h-4 w-4" /> Same Day</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="home" className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Record today’s second</CardTitle>
-              <CardDescription>Upload a short video clip or a single photo for today.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Write a short caption for today"
-                className="rounded-2xl"
-              />
-              <input
-                ref={inputRef}
-                type="file"
-                accept="video/*,image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <div className="grid gap-3 md:grid-cols-2">
-                <Button
-                  className="rounded-2xl h-14 text-base"
-                  onClick={() => inputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <Upload className="mr-2 h-5 w-5" />
-                  {uploading ? "Uploading..." : todayEntry ? "Replace today’s moment" : "Upload today’s moment"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="rounded-2xl h-14 text-base"
-                  onClick={() => {
-                    setActiveTab("timeline");
-                    setSelectedDate(today);
-                  }}
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  View timeline
-                </Button>
-              </div>
-
-              {todayEntry && (
-                <div className="rounded-3xl border p-4">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium">Today’s saved moment</div>
-                      <div className="text-xs text-muted-foreground">{formatDate(today)}</div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => deleteEntry(todayEntry.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {todayEntry.type === "video" ? (
-                    <video src={todayEntry.src} controls className="w-full rounded-2xl" />
-                  ) : (
-                    <img src={todayEntry.src} alt={todayEntry.caption} className="w-full rounded-2xl object-cover max-h-96" />
-                  )}
-                  <p className="mt-3 text-sm text-muted-foreground">{todayEntry.caption}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Why this product works</CardTitle>
-              <CardDescription>The MVP already shows the three core hooks.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">1. Daily habit</div>
-                <div className="text-muted-foreground mt-1">One simple action per day keeps the app light and sticky.</div>
-              </div>
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">2. Emotional value</div>
-                <div className="text-muted-foreground mt-1">Every entry becomes part of a living memory timeline.</div>
-              </div>
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">3. Curiosity loop</div>
-                <div className="text-muted-foreground mt-1">The Same Day feature makes users want to come back and explore.</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="timeline">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Your month</CardTitle>
-              <CardDescription>Tap a day to view the saved moment.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
-                {days.map((day) => {
-                  const entry = entries.find((e) => e.date === day);
-                  const isSelected = selectedDate === day;
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => setSelectedDate(day)}
-                      className={`rounded-2xl border p-3 text-left transition ${
-                        isSelected ? "ring-2 ring-primary" : "hover:bg-muted"
-                      }`}
-                    >
-                      <div className="text-xs text-muted-foreground">{day.slice(8, 10)}</div>
-                      <div className="mt-2 text-sm font-medium truncate">{entry ? "Saved" : "Empty"}</div>
-                      <div className="mt-3 h-16 rounded-xl bg-muted overflow-hidden flex items-center justify-center">
-                        {entry ? (
-                          entry.type === "image" ? (
-                            <img src={entry.src} alt="thumbnail" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1"><Play className="h-3 w-3" /> Video</div>
-                          )
-                        ) : (
-                          <div className="text-[11px] text-muted-foreground">No entry</div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>{formatDate(selectedDate)}</CardTitle>
-              <CardDescription>{currentEntry ? "Saved moment" : "No saved moment for this day"}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {currentEntry ? (
-                <div className="space-y-4">
-                  {currentEntry.type === "video" ? (
-                    <video src={currentEntry.src} controls className="w-full rounded-2xl" />
-                  ) : (
-                    <img src={currentEntry.src} alt={currentEntry.caption} className="w-full rounded-2xl object-cover max-h-96" />
-                  )}
-                  <p className="text-sm text-muted-foreground">{currentEntry.caption}</p>
-                </div>
-              ) : (
-                <EmptyState title="Nothing saved yet" text="Select another day or upload a moment from the Home tab." icon={Calendar} />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="story">
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Monthly story</CardTitle>
-              <CardDescription>A simple MVP version of your auto-generated life film.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-                This version builds a playable story viewer from your saved entries. In production, this would export a stitched video with transitions, music, captions, and share links.
-              </div>
-              <Button
-                className="rounded-2xl h-12"
-                disabled={!monthlyStory.length}
-                onClick={() => {
-                  setStoryIndex(0);
-                  setStoryOpen(true);
-                }}
-              >
-                <Film className="mr-2 h-4 w-4" />
-                Open your story
-              </Button>
-              {!monthlyStory.length && (
-                <p className="text-sm text-muted-foreground">Add a few moments first to generate a story.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Story frames</CardTitle>
-              <CardDescription>{monthlyStory.length} moments ready</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {monthlyStory.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {monthlyStory.map((item) => (
-                    <div key={item.id} className="rounded-2xl border p-3">
-                      <div className="text-xs text-muted-foreground">{formatDate(item.date)}</div>
-                      <div className="mt-2 aspect-video rounded-xl bg-muted overflow-hidden">
-                        {item.type === "image" ? (
-                          <img src={item.src} alt={item.caption} className="h-full w-full object-cover" />
-                        ) : (
-                          <video src={item.src} className="h-full w-full object-cover" />
-                        )}
-                      </div>
-                      <div className="mt-2 text-sm">{item.caption}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState title="No story yet" text="Your monthly story appears automatically once you start saving moments." icon={Film} />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Dialog open={storyOpen} onOpenChange={setStoryOpen}>
-          <DialogContent className="max-w-3xl rounded-3xl">
-            <DialogHeader>
-              <DialogTitle>Your monthly story</DialogTitle>
-              <DialogDescription>Swipe through your moments like a lightweight memory reel.</DialogDescription>
-            </DialogHeader>
-            {monthlyStory.length > 0 && (
-              <div className="space-y-4">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={monthlyStory[storyIndex].id}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    className="space-y-3"
-                  >
-                    <div className="text-sm text-muted-foreground">{formatDate(monthlyStory[storyIndex].date)}</div>
-                    <div className="aspect-video rounded-2xl overflow-hidden bg-muted">
-                      {monthlyStory[storyIndex].type === "image" ? (
-                        <img src={monthlyStory[storyIndex].src} alt={monthlyStory[storyIndex].caption} className="h-full w-full object-cover" />
-                      ) : (
-                        <video src={monthlyStory[storyIndex].src} controls autoPlay className="h-full w-full object-cover" />
-                      )}
-                    </div>
-                    <div className="font-medium">{monthlyStory[storyIndex].caption}</div>
-                  </motion.div>
-                </AnimatePresence>
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="secondary"
-                    className="rounded-2xl"
-                    onClick={() => setStoryIndex((i) => Math.max(i - 1, 0))}
-                    disabled={storyIndex === 0}
-                  >
-                    Previous
-                  </Button>
-                  <div className="text-sm text-muted-foreground">{storyIndex + 1} / {monthlyStory.length}</div>
-                  <Button
-                    className="rounded-2xl"
-                    onClick={() => setStoryIndex((i) => Math.min(i + 1, monthlyStory.length - 1))}
-                    disabled={storyIndex === monthlyStory.length - 1}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </TabsContent>
-
-      <TabsContent value="world">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Same Day — Different Lives</CardTitle>
-              <CardDescription>Your unique hook: explore anonymous moments from the same date.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-3xl border p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-xs text-muted-foreground">{communityMoments[communityIndex].date}</div>
-                    <div className="mt-2 text-2xl font-bold">{communityMoments[communityIndex].emoji} {communityMoments[communityIndex].country}</div>
-                    <div className="mt-3 text-sm text-muted-foreground">{communityMoments[communityIndex].caption}</div>
-                  </div>
-                  <Badge className="rounded-xl">Anonymous</Badge>
-                </div>
-              </div>
-              <Button className="rounded-2xl h-12" onClick={nextCommunity}>
-                <Globe className="mr-2 h-4 w-4" />
-                Show another life
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl shadow-sm">
-            <CardHeader>
-              <CardTitle>How to make this real</CardTitle>
-              <CardDescription>These are the next product layers after the MVP.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2 text-sm">
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">User accounts</div>
-                <div className="mt-1 text-muted-foreground">Firebase Auth or Supabase Auth for Google, Apple, and email login.</div>
-              </div>
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">Cloud storage</div>
-                <div className="mt-1 text-muted-foreground">Store 1-second clips securely and generate thumbnails.</div>
-              </div>
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">Story rendering</div>
-                <div className="mt-1 text-muted-foreground">Use ffmpeg or Remotion to export monthly and yearly videos.</div>
-              </div>
-              <div className="rounded-2xl bg-muted p-4">
-                <div className="font-medium">Privacy controls</div>
-                <div className="mt-1 text-muted-foreground">Opt in to anonymous global sharing per moment.</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-    </Tabs>
-  </div>
+<div class="card">
+  <input type="file" id="fileInput" accept="video/*,image/*">
+  <button onclick="saveMoment()">Spara dagens moment</button>
 </div>
 
-); }
+<div id="today" class="card"></div>
+
+<div class="card">
+  <button onclick="showRandom()">Se någon annans dag</button>
+  <p id="randomText"></p>
+</div>
+
+<script>
+const STORAGE_KEY = "one-second-world";
+
+function getToday() {
+  const d = new Date();
+  return d.toISOString().split("T")[0];
+}
+
+function loadData() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function saveMoment() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) return alert("Välj en fil");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = loadData();
+    data[getToday()] = {
+      src: e.target.result,
+      type: file.type
+    };
+    saveData(data);
+    renderToday();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderToday() {
+  const data = loadData();
+  const today = data[getToday()];
+  const el = document.getElementById("today");
+
+  if (!today) {
+    el.innerHTML = "Ingen video idag";
+    return;
+  }
+
+  if (today.type.startsWith("video")) {
+    el.innerHTML = "<video controls src='" + today.src + "'></video>";
+  } else {
+    el.innerHTML = "<img src='" + today.src + "' />";
+  }
+}
+
+function showRandom() {
+  const examples = [
+    "Japan 🇯🇵 – morgontåg",
+    "Brasilien 🇧🇷 – familjelunch",
+    "Sverige 🇸🇪 – skogspromenad",
+    "Kenya 🇰🇪 – fotboll",
+    "Italien 🇮🇹 – kaffe"
+  ];
+
+  const random = examples[Math.floor(Math.random() * examples.length)];
+  document.getElementById("randomText").innerText = random;
+}
+
+renderToday();
+</script>
+
+</body>
+</html>
